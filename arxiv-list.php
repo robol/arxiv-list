@@ -1,14 +1,14 @@
 <?php
 /**
  * @package Arxiv_List
- * @version 0.4.2
+ * @version 0.4.3
  */
 /*
 Plugin Name: ArXiv list
 Plugin URI: https://github.com/robol/arxiv-list
 Description: Generate a list of preprints from the ArXiv.
 Author: Leonardo Robol
-Version: 0.4.2
+Version: 0.4.3
 Author URI: https://leonardo.robol.it/
 */
 
@@ -149,8 +149,8 @@ function al_generate_recent_paper_html($a) {
     }
     $buffer = $buffer . "</ul>";
 
-    // Save in cache for the next calls, we store it for 6 hours seconds
-    set_transient($key, $buffer, 10 * MINUTES_IN_SECONDS);
+    // Save in cache for the next calls, we store it for 5 minutes
+    set_transient($key, $buffer, 5 * 60);
 
     return $buffer;
 }
