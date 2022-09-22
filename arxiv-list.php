@@ -17,6 +17,8 @@ class Paper {
     public $authors = "";
     public $published = 0;
     public $link = "#";
+    public $summary = "";
+    public $year = 0;
 }
 
 function al_get_papers($orcid) {
@@ -39,11 +41,16 @@ function al_get_papers_from_xml($res) {
 
         for ($i = 0; $i < $npapers; $i++) {
             $p = $data->entry[$i];
+
+            $dt = new DateTime($p->published);
+
             $paper = new Paper;
             $paper->title = $p->title;
             $paper->authors = $p->author->name;
-            $paper->published = (new DateTime($p->published))->getTimestamp();
+            $paper->published = $dt->getTimestamp();
             $paper->link = $p->link[0]["href"][0];
+            $paper->summary = $p->summary;
+            $paper->year = $dt->format('Y');
 
             array_push($papers, $paper);
         }
@@ -137,8 +144,8 @@ function al_generate_recent_paper_html($a) {
             '<a href="' . $paper->link . '">' .
                 $paper->title . 
             "</a>, " . 
-            $paper->authors .
-            ".</li>";
+            $paper->authors . ", " .
+            $paper->year . ".</li>";
     }
     $buffer = $buffer . "</ul>";
 
