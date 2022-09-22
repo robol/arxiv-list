@@ -1,14 +1,14 @@
 <?php
 /**
  * @package Arxiv_List
- * @version 0.10.
+ * @version 0.2.0
  */
 /*
 Plugin Name: ArXiv list
 Plugin URI: https://github.com/robol/arxiv-list
 Description: Generate a list of preprints from the ArXiv.
 Author: Leonardo Robol
-Version: 0.1.0
+Version: 0.2.0
 Author URI: https://leonardo.robol.it/
 */
 
@@ -68,6 +68,12 @@ function arxiv_list_shortcode($atts) {
         'npapers' => 5
     ), $atts);
 
+    return '<div class="al_paper_list" data-orcids="' . $a['orcids'] . '" data-npapers="' . $a['npapers'] . '">Loading preprints ...</div>';
+
+    // return al_generate_recent_paper_html($a);
+}
+
+function al_generate_recent_paper_html($a) {
     // Try to get the result from cache, if possible
     $key = al_compute_cache_key($a['orcids'], $a['npapers']);
     $cached_data = get_transient($key);
@@ -92,12 +98,31 @@ function arxiv_list_shortcode($atts) {
     $buffer = $buffer . "</ul></p>";
 
     // Save in cache for the next calls, we store it for 6 hours seconds
-    set_transient($key, $buffer, 6 * HOUR_IN_SECONDS);
+    set_transient($key, $buffer, 10 * MINUTES_IN_SECONDS);
 
     return $buffer;
 }
 
+function arxiv_list_api(WP_REST_Request $request) {
+    $data = $request->get_params();
+    $buffer = al_generate_recent_paper_html($data);
+
+    return new WP_REST_Response([ 'response' => $buffer ], 200);
+}
+
 add_shortcode('arxiv_list', 'arxiv_list_shortcode');
+
+add_action('rest_api_init', function() {
+    register_rest_route( 'arxiv_list/v1', '/generate', array(
+      'methods' => 'POST',
+      'callback' => 'arxiv_list_api',
+    ) );
+  } );
+
+function al_enqueue_script() {   
+    wp_enqueue_script( 'arxiv_list', plugin_dir_url( __FILE__ ) . 'arxiv-list.js' );
+}
+add_action('wp_enqueue_scripts', 'al_enqueue_script');
 
 
 ?>
