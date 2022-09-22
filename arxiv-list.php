@@ -1,14 +1,14 @@
 <?php
 /**
  * @package Arxiv_List
- * @version 0.4.0
+ * @version 0.4.1
  */
 /*
 Plugin Name: ArXiv list
 Plugin URI: https://github.com/robol/arxiv-list
 Description: Generate a list of preprints from the ArXiv.
 Author: Leonardo Robol
-Version: 0.4.0
+Version: 0.4.1
 Author URI: https://leonardo.robol.it/
 */
 

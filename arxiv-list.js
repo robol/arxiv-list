@@ -21,8 +21,8 @@ function al_load_papers() {
         const data = await response.json();
 
         // Create the HTML element, and replace the <p> with the list
-        var div = document.createElement('div');
-        div.innerHTML = data['response'];        
-        element.parentNode.replaceChild(div.firstChild, element);
+        var template = document.createElement('template');
+        template.innerHTML = data['response'].trim();    
+        element.parentNode.replaceChild(template.content.firstChild, element);
     });
 }
