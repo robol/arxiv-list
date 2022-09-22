@@ -1,14 +1,14 @@
 <?php
 /**
  * @package Arxiv_List
- * @version 0.2.0
+ * @version 0.3.0
  */
 /*
 Plugin Name: ArXiv list
 Plugin URI: https://github.com/robol/arxiv-list
 Description: Generate a list of preprints from the ArXiv.
 Author: Leonardo Robol
-Version: 0.2.0
+Version: 0.3.0
 Author URI: https://leonardo.robol.it/
 */
 
@@ -23,19 +23,29 @@ function al_get_papers($orcid) {
     $url = "https://arxiv.org/a/" . $orcid . ".atom2";
     $res = file_get_contents($url);
 
-    $data = new SimpleXMLElement($res);
-    $npapers = count($data->entry);
+    if (! $res) {
+        return [];
+    }
+
     $papers = [];
 
-    for ($i = 0; $i < $npapers; $i++) {
-        $p = $data->entry[$i];
-        $paper = new Paper;
-        $paper->title = $p->title;
-        $paper->authors = $p->author->name;
-        $paper->published = (new DateTime($p->published))->getTimestamp();
-        $paper->link = $p->link[0]["href"][0];
+    try {
+        $data = new SimpleXMLElement($res);
+        $npapers = count($data->entry);
 
-        array_push($papers, $paper);
+        for ($i = 0; $i < $npapers; $i++) {
+            $p = $data->entry[$i];
+            $paper = new Paper;
+            $paper->title = $p->title;
+            $paper->authors = $p->author->name;
+            $paper->published = (new DateTime($p->published))->getTimestamp();
+            $paper->link = $p->link[0]["href"][0];
+
+            array_push($papers, $paper);
+        }
+    }
+    catch (Exception $e) {
+        // We do nothing, and silently ignore malformed responses.
     }
 
     return $papers;
@@ -44,7 +54,7 @@ function al_get_papers($orcid) {
 function al_get_recent_papers($orcids, $n) {
     $papers = [];
     foreach ($orcids as $orcid) {
-        $papers = array_merge($papers, al_get_papers($orcid));
+        $papers = array_merge($papers, al_get_papers(trim($orcid)));        
     }
 
     uasort($papers, function ($a, $b) {
