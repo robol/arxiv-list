@@ -1,14 +1,14 @@
 <?php
 /**
  * @package Arxiv_List
- * @version 0.3.0
+ * @version 0.4.0
  */
 /*
 Plugin Name: ArXiv list
 Plugin URI: https://github.com/robol/arxiv-list
 Description: Generate a list of preprints from the ArXiv.
 Author: Leonardo Robol
-Version: 0.3.0
+Version: 0.4.0
 Author URI: https://leonardo.robol.it/
 */
 
@@ -23,6 +23,10 @@ function al_get_papers($orcid) {
     $url = "https://arxiv.org/a/" . $orcid . ".atom2";
     $res = file_get_contents($url);
 
+    return al_get_papers_from_xml($res);
+}
+
+function al_get_papers_from_xml($res) {
     if (! $res) {
         return [];
     }
@@ -52,9 +56,35 @@ function al_get_papers($orcid) {
 }
 
 function al_get_recent_papers($orcids, $n) {
+    $responses = [];
+    $requests = [];
+
+    foreach ($orcids as $orcid) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://arxiv.org/a/" . trim($orcid) . ".atom2");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $requests[$orcid] = $ch;
+    }
+
+    // Perform the requests in parallel with Curl multi
+    $cm = curl_multi_init();
+    foreach ($requests as $ch) {
+        curl_multi_add_handle($cm, $ch);
+    }
+
+    $running = true;
+    while ($running) {
+        curl_multi_exec($cm, $running);
+    }
+
+    // Get all responses
+    foreach ($orcids as $orcid) {
+        $responses[$orcid] = curl_multi_getcontent($requests[$orcid]);
+    }
+
     $papers = [];
     foreach ($orcids as $orcid) {
-        $papers = array_merge($papers, al_get_papers(trim($orcid)));        
+        $papers = array_merge($papers, al_get_papers_from_xml($responses[$orcid]));        
     }
 
     uasort($papers, function ($a, $b) {
@@ -78,25 +108,30 @@ function arxiv_list_shortcode($atts) {
         'npapers' => 5
     ), $atts);
 
-    return '<div class="al_paper_list" data-orcids="' . $a['orcids'] . '" data-npapers="' . $a['npapers'] . '">Loading preprints ...</div>';
-
-    // return al_generate_recent_paper_html($a);
-}
-
-function al_generate_recent_paper_html($a) {
-    // Try to get the result from cache, if possible
+    // Try to get the result from cache, if possible. If we have it, 
+    // avoid making the extra AJAX request from the page, and directly 
+    // embed the list. 
     $key = al_compute_cache_key($a['orcids'], $a['npapers']);
     $cached_data = get_transient($key);
-    
+
     if (false !== $cached_data) {
         return $cached_data;
     }
+
+    return '<p class="al_paper_list" data-orcids="' . 
+        $a['orcids'] . '"' . 
+        ' data-npapers="' . $a['npapers'] . '">' . 
+    'Loading preprints ...</p>';
+}
+
+function al_generate_recent_paper_html($a) {
+    $key = al_compute_cache_key($a['orcids'], $a['npapers']);
 
     $orcids = explode(',', $a['orcids']);
     $npapers = $a['npapers'];
     $papers = al_get_recent_papers($orcids, $npapers);
     
-    $buffer = "<p><ul>";
+    $buffer = "<ul>";
     foreach ($papers as $paper) {
         $buffer = $buffer . "<li>" . 
             '<a href="' . $paper->link . '">' .
@@ -105,7 +140,7 @@ function al_generate_recent_paper_html($a) {
             $paper->authors .
             ".</li>";
     }
-    $buffer = $buffer . "</ul></p>";
+    $buffer = $buffer . "</ul>";
 
     // Save in cache for the next calls, we store it for 6 hours seconds
     set_transient($key, $buffer, 10 * MINUTES_IN_SECONDS);
