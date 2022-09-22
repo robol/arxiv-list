@@ -1,6 +1,6 @@
-# ArXiV List
+# arXiv List
 
-A Wordpress plugin to list the latest preprints loaded on the ArXiv by a set of authors. 
+A Wordpress plugin to list the latest preprints loaded on the arXiv by a set of authors. 
 
 ## How to use it
 
